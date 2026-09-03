@@ -1,0 +1,36 @@
+{
+  "profil_klinik": {
+    "nama": "Klinik Sehat Sentosa",
+    "alamat": "Jl. Kesehatan Raya No. 45, Yogyakarta, Daerah Istimewa Yogyakarta",
+    "jam_operasional": {
+      "senin_jumat": "07:00 - 20:00",
+      "sabtu": "07:00 - 17:00",
+      "minggu": "08:00 - 14:00 (IGD 24 jam)"
+    },
+    "kontak": {
+      "telepon": "(0274) 123456",
+      "whatsapp": "0812-3456-7890",
+      "email": "info@kliniksehatsentosa.co.id"
+    },
+    "fasilitas": ["Ruang tunggu ber-AC", "Apotek internal", "Laboratorium klinik", "Parkir luas", "IGD 24 jam"]
+  },
+  "layanan_poliklinik": [
+    { "nama": "Poli Umum", "deskripsi": "Pemeriksaan kesehatan umum, keluhan ringan hingga sedang, surat rujukan, dan medical check up dasar.", "harga_konsultasi": "Rp 50.000" },
+    { "nama": "Poli Gigi", "deskripsi": "Scaling, tambal gigi, cabut gigi, dan konsultasi kesehatan mulut.", "harga_konsultasi": "Rp 75.000" },
+    { "nama": "Poli Anak", "deskripsi": "Pemeriksaan tumbuh kembang, imunisasi, dan penanganan penyakit anak.", "harga_konsultasi": "Rp 60.000" },
+    { "nama": "Poli Kandungan", "deskripsi": "Pemeriksaan kehamilan, USG, KB, dan kesehatan reproduksi wanita.", "harga_konsultasi": "Rp 150.000" },
+    { "nama": "Poli Penyakit Dalam", "deskripsi": "Penanganan diabetes, hipertensi, dan gangguan pencernaan.", "harga_konsultasi": "Rp 150.000" },
+    { "nama": "Poli Kulit & Kelamin", "deskripsi": "Konsultasi masalah kulit, alergi, dan perawatan estetik dasar.", "harga_konsultasi": "Rp 130.000" }
+  ],
+  "prosedur_pendaftaran": {
+    "pasien_baru": ["Datang ke loket atau daftar melalui WhatsApp/website.", "Siapkan KTP dan kartu BPJS/asuransi jika ada.", "Isi formulir data diri.", "Ambil nomor antrean sesuai poli tujuan."],
+    "pasien_lama": ["Tunjukkan kartu berobat.", "Sampaikan keluhan atau poli tujuan.", "Ambil nomor antrean dan tunggu panggilan."],
+    "pendaftaran_online": "Kirim nama, tanggal lahir, dan poli tujuan melalui WhatsApp 0812-3456-7890 minimal satu jam sebelum praktik."
+  },
+  "faq": [
+    { "pertanyaan": "Apakah klinik menerima BPJS?", "jawaban": "Ya, Klinik Sehat Sentosa bekerja sama dengan BPJS Kesehatan. Pastikan kepesertaan aktif dan klinik terdaftar sebagai faskes pilihan." },
+    { "pertanyaan": "Apakah tersedia parkir?", "jawaban": "Tersedia area parkir untuk motor dan mobil pasien." },
+    { "pertanyaan": "Apakah ada layanan gawat darurat?", "jawaban": "Ya, IGD Klinik Sehat Sentosa buka 24 jam setiap hari." },
+    { "pertanyaan": "Apakah bisa daftar online?", "jawaban": "Pendaftaran online tersedia melalui WhatsApp klinik dengan mengirimkan nama, tanggal lahir, dan poli tujuan." }
+  ]
+}

@@ -2,6 +2,11 @@ const sendResponse = require('../utils/response');
 const database = require('../db');
 const config = require('../config/env');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
+const { buildDocuments, formatDocument } = require('../services/rag.service');
+
+const knowledgeFile = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'knowledgeBase.json'), 'utf8'));
 
 const defaultKnowledge = [
   {
@@ -42,13 +47,8 @@ function termFrequency(words) {
 }
 
 function retrieve(message, context = {}) {
-  const databaseKnowledge = database.prepare('SELECT kategori, judul, konten FROM knowledge_base').all();
-  const databaseDoctors = database.prepare('SELECT nama, spesialisasi, deskripsi FROM doctors').all();
-  const databaseSchedules = database.prepare("SELECT d.nama AS dokter, s.hari, s.jam_mulai AS jamMulai, s.jam_selesai AS jamSelesai, s.kuota FROM schedules s JOIN doctors d ON d.id = s.doctor_id WHERE s.status = 'Aktif'").all();
   const documents = [
-    ...databaseKnowledge,
-    ...databaseDoctors,
-    ...databaseSchedules,
+    ...buildDocuments(knowledgeFile, database),
     ...(Array.isArray(context.knowledge) && context.knowledge.length > 0
       ? context.knowledge
       : defaultKnowledge),
@@ -56,7 +56,7 @@ function retrieve(message, context = {}) {
     ...(Array.isArray(context.schedules) ? context.schedules : []),
   ];
   const queryWords = normalize(message);
-  const corpus = documents.map((document) => normalize(`jadwal dokter ${document.kategori || ''} ${document.judul || ''} ${document.konten || ''} ${document.nama || ''} ${document.spesialisasi || ''} ${document.dokter || ''} ${document.hari || ''} ${document.jam || ''} ${document.jamMulai || ''} ${document.jamSelesai || ''}`));
+  const corpus = documents.map((document) => normalize(`${document.kategori || ''} ${document.judul || ''} ${document.konten || ''} ${document.nama || ''} ${document.spesialisasi || ''} ${document.dokter || ''} ${document.hari || ''} ${document.jam || ''} ${document.jamMulai || ''} ${document.jamSelesai || ''}`));
   const queryFrequency = termFrequency(queryWords);
   const documentFrequency = {};
   corpus.forEach((words) => new Set(words).forEach((word) => { documentFrequency[word] = (documentFrequency[word] || 0) + 1; }));
@@ -77,18 +77,6 @@ function retrieve(message, context = {}) {
     .sort((left, right) => right.score - left.score)
     .slice(0, 3)
     .map((item) => item.document);
-}
-
-function formatDocument(document) {
-  if (document.dokter) {
-    return `${document.dokter} praktik hari ${document.hari}, pukul ${document.jamMulai}-${document.jamSelesai}, kuota ${document.kuota}.`;
-  }
-
-  if (document.nama) {
-    return `${document.nama} (${document.spesialisasi}).`;
-  }
-
-  return `${document.judul}: ${document.konten}`;
 }
 
 const embeddingCache = new Map();

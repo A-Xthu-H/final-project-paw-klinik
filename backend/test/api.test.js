@@ -54,7 +54,7 @@ test('admin endpoint rejects patient token', async () => {
 
 test('chat stores history and returns fallback for unknown information', async () => {
   const sessionId = `test-${Date.now()}`;
-  const result = await request('/api/chat', 'POST', { message: 'informasi yang tidak terdaftar', sessionId });
+  const result = await request('/api/chat', 'POST', { message: 'astronomi kuantum mars', sessionId });
   const history = await request(`/api/chat/history/${sessionId}`);
   assert.equal(result.status, 200);
   assert.equal(result.body.data.fallback, true);

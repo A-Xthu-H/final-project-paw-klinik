@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useChatbot } from '../hooks/useChatbot';
 import { apiGet } from '../utils/api';
 
@@ -29,6 +29,7 @@ function readContext() {
 function ChatbotWidget({ embedded = false }) {
   const [open, setOpen] = useState(embedded);
   const [draft, setDraft] = useState('');
+  const messagesEndRef = useRef(null);
   const [showBooking, setShowBooking] = useState(false);
   const [booking, setBooking] = useState({ schedule_id: '', tanggal: '', jam: '', kontak: '' });
   const [availableSchedules, setAvailableSchedules] = useState([]);
@@ -37,6 +38,10 @@ function ChatbotWidget({ embedded = false }) {
   useEffect(() => {
     apiGet('/api/schedules').then((result) => setAvailableSchedules(result.data || [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -114,11 +119,12 @@ function ChatbotWidget({ embedded = false }) {
         )}
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${message.role === 'user' ? 'self-end bg-teal-700 text-white' : 'self-start bg-white text-gray-700 shadow-sm'}`}>
-            {message.content}
+            <span className="whitespace-pre-line">{message.content}</span>
           </div>
         ))}
         {loading && <div className="self-start rounded-xl bg-white px-3 py-2 text-sm text-gray-500 shadow-sm">Sedang mencari informasi...</div>}
         {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+        <div ref={messagesEndRef} />
       </div>
 
       <form onSubmit={handleSubmit} className="flex gap-2 border-t bg-white p-3">
