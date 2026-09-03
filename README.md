@@ -264,3 +264,5 @@ di-deploy ke Vercel atau Netlify sesuai kebutuhan project.
 <!-- Commit: feat(ui): build login and registration page UI - 09/04/2026 05:34:31 -->
 
 <!-- Commit: feat(ui): implement doctor dashboard and schedule list view - 09/04/2026 05:34:32 -->
+
+<!-- Commit: feat(ui): create patient booking form and confirmation page - 09/04/2026 05:34:33 -->
