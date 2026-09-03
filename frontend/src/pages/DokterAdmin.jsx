@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiDelete, apiGet, apiPost, apiPut } from '../utils/api';
 
 const initialDoctors = [
   {
@@ -49,6 +50,8 @@ const initialDoctors = [
 const emptyForm = {
   nama: '',
   spesialisasi: '',
+  foto: '',
+  deskripsi: '',
   jadwal: '',
   jam: '',
 };
@@ -56,38 +59,15 @@ const emptyForm = {
 function DokterAdmin() {
   const navigate = useNavigate();
 
-  const [doctors, setDoctors] = useState(() => {
-    try {
-      const savedDoctors = localStorage.getItem('doctors');
-
-      if (savedDoctors) {
-        return JSON.parse(savedDoctors);
-      }
-    } catch (error) {
-      console.error('Gagal membaca data dokter:', error);
-    }
-
-    localStorage.setItem(
-      'doctors',
-      JSON.stringify(initialDoctors)
-    );
-
-    return initialDoctors;
-  });
+  const [doctors, setDoctors] = useState(initialDoctors);
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
-  const saveDoctors = (data) => {
-    setDoctors(data);
-
-    localStorage.setItem(
-      'doctors',
-      JSON.stringify(data)
-    );
-  };
+  useEffect(() => { apiGet('/api/doctors').then((result) => setDoctors(result.data || [])).catch(() => setLoadError('Data dokter tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -110,6 +90,8 @@ function DokterAdmin() {
     setForm({
       nama: doctor.nama,
       spesialisasi: doctor.spesialisasi,
+      foto: doctor.foto || '',
+      deskripsi: doctor.deskripsi || '',
       jadwal: doctor.jadwal,
       jam: doctor.jam,
     });
@@ -123,7 +105,7 @@ function DokterAdmin() {
     setForm(emptyForm);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (editingId !== null) {
@@ -136,7 +118,8 @@ function DokterAdmin() {
           : doctor
       );
 
-      saveDoctors(updatedDoctors);
+      const result = await apiPut(`/api/doctors/${editingId}`, form);
+      setDoctors((current) => current.map((doctor) => doctor.id === editingId ? result.data : doctor));
     } else {
       const newDoctor = {
         id: Date.now(),
@@ -148,7 +131,8 @@ function DokterAdmin() {
         newDoctor,
       ];
 
-      saveDoctors(updatedDoctors);
+      const result = await apiPost('/api/doctors', form);
+      setDoctors((current) => [...current, result.data]);
     }
 
     closeModal();
@@ -158,14 +142,15 @@ function DokterAdmin() {
     setDeleteTarget(doctor);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
 
     const updatedDoctors = doctors.filter(
       (doctor) => doctor.id !== deleteTarget.id
     );
 
-    saveDoctors(updatedDoctors);
+    await apiDelete(`/api/doctors/${deleteTarget.id}`);
+    setDoctors((current) => current.filter((doctor) => doctor.id !== deleteTarget.id));
 
     setDeleteTarget(null);
   };
@@ -197,6 +182,7 @@ function DokterAdmin() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">
@@ -394,6 +380,20 @@ function DokterAdmin() {
                   placeholder="Contoh: Senin, Rabu, Jumat"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-teal-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  URL Foto (opsional)
+                </label>
+                <input type="url" name="foto" value={form.foto} onChange={handleChange} placeholder="https://..." className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-teal-500" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Deskripsi Singkat
+                </label>
+                <textarea name="deskripsi" value={form.deskripsi} onChange={handleChange} required rows="3" placeholder="Deskripsi dokter" className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
               </div>
 
               <div>

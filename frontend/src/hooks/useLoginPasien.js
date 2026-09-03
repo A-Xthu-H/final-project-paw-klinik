@@ -23,6 +23,7 @@ export function useLoginPasien() {
       });
 
       if (result.success) {
+        localStorage.setItem('authToken', result.data.token);
         localStorage.setItem('pasienLoggedIn', 'true');
 
         localStorage.setItem(

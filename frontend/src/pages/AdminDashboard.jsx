@@ -1,7 +1,15 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiGet } from '../utils/api';
 
 function AdminDashboard() {
   const navigate = useNavigate();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => { apiGet('/api/dashboard').then((result) => setDashboardData(result.data)).catch(() => setLoadError('Ringkasan dashboard tidak dapat dimuat. Pastikan backend aktif.')); }, []);
+  useEffect(() => { apiGet('/api/appointments').then((result) => setAppointments(result.data || [])).catch(() => setLoadError('Appointment terbaru tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
   const getLocalStorageData = (key) => {
     try {
@@ -19,7 +27,6 @@ function AdminDashboard() {
 
   const doctors = getLocalStorageData('doctors');
   const schedules = getLocalStorageData('schedules');
-  const appointments = getLocalStorageData('appointments');
 
   const activeSchedules = schedules.filter(
     (schedule) => schedule.status === 'Aktif'
@@ -32,19 +39,19 @@ function AdminDashboard() {
   const stats = [
     {
       title: 'Jumlah Dokter',
-      value: doctors.length,
+      value: dashboardData?.doctors ?? doctors.length,
       description: 'Dokter terdaftar',
       icon: '👨‍⚕️',
     },
     {
       title: 'Jadwal Aktif',
-      value: activeSchedules.length,
+      value: dashboardData?.activeSchedules ?? activeSchedules.length,
       description: 'Jadwal praktik aktif',
       icon: '📅',
     },
     {
       title: 'Appointment',
-      value: appointments.length,
+      value: dashboardData?.appointments ?? appointments.length,
       description: 'Total appointment',
       icon: '📝',
     },
@@ -87,6 +94,7 @@ function AdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminUser');
+    localStorage.removeItem('authToken');
 
     navigate('/');
   };
@@ -128,6 +136,7 @@ function AdminDashboard() {
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         {/* Welcome */}
         <div className="mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">

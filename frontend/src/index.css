@@ -1,3 +1,55 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+	html,
+	body,
+	#root {
+		min-width: 320px;
+		min-height: 100%;
+	}
+
+	body {
+		overflow-x: hidden;
+	}
+
+	input,
+	select,
+	textarea,
+	button {
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 640px) {
+	header .max-w-7xl {
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	header button {
+		white-space: normal;
+	}
+
+	main {
+		padding-top: 1.5rem;
+		padding-bottom: 1.5rem;
+	}
+
+	table {
+		min-width: 620px;
+	}
+
+	.fixed.inset-0 {
+		align-items: flex-start;
+		overflow-y: auto;
+		padding-top: 1rem;
+		padding-bottom: 1rem;
+	}
+
+	.fixed.inset-0 > div {
+		max-height: calc(100svh - 2rem);
+		overflow-y: auto;
+	}
+}

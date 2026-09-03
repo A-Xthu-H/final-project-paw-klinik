@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ChatbotWidget from '../components/ChatbotWidget';
+import { apiGet, apiPost } from '../utils/api';
 
 function PasienDashboard() {
   const navigate = useNavigate();
@@ -24,8 +26,16 @@ function PasienDashboard() {
     return [];
   };
 
-  const schedules = getLocalStorageData('schedules');
-  const appointments = getLocalStorageData('appointments');
+  const [schedules, setSchedules] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [booking, setBooking] = useState({ schedule_id: '', tanggal: '', jam: '', kontak: '' });
+  const [bookingMessage, setBookingMessage] = useState('');
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    apiGet('/api/schedules').then((result) => setSchedules(result.data || [])).catch(() => setLoadError('Jadwal dokter tidak dapat dimuat. Pastikan backend aktif.'));
+    apiGet('/api/appointments/mine').then((result) => setAppointments(result.data || [])).catch(() => setLoadError('Appointment Anda tidak dapat dimuat. Pastikan backend aktif.'));
+  }, []);
 
   const activeSchedules = schedules.filter(
     (schedule) => schedule.status === 'Aktif'
@@ -36,9 +46,32 @@ function PasienDashboard() {
       appointment.namaPasien === pasienUser.name
   );
 
+  const handleBooking = async (event) => {
+    event.preventDefault();
+    const selectedSchedule = schedules.find((schedule) => String(schedule.id) === String(booking.schedule_id));
+    if (!selectedSchedule) return;
+    try {
+      const result = await apiPost('/api/appointments', {
+        namaPasien: pasienUser.name,
+        kontak: booking.kontak,
+        doctor_id: selectedSchedule.doctor_id,
+        schedule_id: selectedSchedule.id,
+        tanggal: booking.tanggal,
+        jam: booking.jam,
+        sumber: 'form',
+      });
+      setAppointments((current) => [result.data, ...current]);
+      setBooking({ schedule_id: '', tanggal: '', jam: '', kontak: '' });
+      setBookingMessage('Appointment berhasil dibuat dan menunggu konfirmasi admin.');
+    } catch (error) {
+      setBookingMessage('Appointment gagal dibuat. Periksa jadwal atau kuota yang tersedia.');
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('pasienLoggedIn');
     localStorage.removeItem('pasienUser');
+    localStorage.removeItem('authToken');
 
     navigate('/');
   };
@@ -82,6 +115,7 @@ function PasienDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         {/* Welcome */}
         <div className="mb-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -320,6 +354,18 @@ function PasienDashboard() {
               </button>
             </div>
 
+            <form onSubmit={handleBooking} className="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-teal-100 bg-teal-50 p-4 md:grid-cols-5">
+              <select value={booking.schedule_id} onChange={(event) => setBooking((current) => ({ ...current, schedule_id: event.target.value }))} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <option value="">Pilih jadwal dokter</option>
+                {activeSchedules.map((schedule) => <option key={schedule.id} value={schedule.id}>{schedule.dokter} - {schedule.hari} {schedule.jamMulai}</option>)}
+              </select>
+              <input type="date" value={booking.tanggal} onChange={(event) => setBooking((current) => ({ ...current, tanggal: event.target.value }))} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              <input type="time" value={booking.jam} onChange={(event) => setBooking((current) => ({ ...current, jam: event.target.value }))} required className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              <input type="tel" value={booking.kontak} onChange={(event) => setBooking((current) => ({ ...current, kontak: event.target.value }))} placeholder="Kontak pasien" required className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              <button type="submit" className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white">Buat Appointment</button>
+              {bookingMessage && <p className="text-sm text-teal-800 md:col-span-4">{bookingMessage}</p>}
+            </form>
+
             {myAppointments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
@@ -423,25 +469,7 @@ function PasienDashboard() {
               </button>
             </div>
 
-            <div className="border border-dashed border-teal-300 bg-teal-50 rounded-xl py-12 px-6 text-center">
-              <div className="text-5xl mb-4">
-                🤖
-              </div>
-
-              <h4 className="font-bold text-gray-800 text-lg">
-                Chatbot Klinik
-              </h4>
-
-              <p className="text-sm text-gray-500 mt-2 max-w-lg mx-auto">
-                Fitur chatbot akan menggunakan basis
-                pengetahuan klinik untuk menjawab pertanyaan
-                pasien.
-              </p>
-
-              <div className="inline-block mt-5 bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-semibold">
-                Menunggu integrasi RAG / AI
-              </div>
-            </div>
+            <ChatbotWidget embedded />
           </section>
         )}
       </main>

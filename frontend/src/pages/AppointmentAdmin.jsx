@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiGet, apiPatch } from '../utils/api';
 
 const initialAppointments = [
   {
@@ -25,56 +26,24 @@ const initialAppointments = [
 function AppointmentAdmin() {
   const navigate = useNavigate();
 
-  const [appointments, setAppointments] = useState(() => {
-    try {
-      const savedAppointments =
-        localStorage.getItem('appointments');
-
-      if (savedAppointments) {
-        return JSON.parse(savedAppointments);
-      }
-    } catch (error) {
-      console.error(
-        'Gagal membaca data appointment:',
-        error
-      );
-    }
-
-    localStorage.setItem(
-      'appointments',
-      JSON.stringify(initialAppointments)
-    );
-
-    return initialAppointments;
-  });
+  const [appointments, setAppointments] = useState(initialAppointments);
 
   const [editingAppointment, setEditingAppointment] =
     useState(null);
 
   const [showEditModal, setShowEditModal] =
     useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
-  const saveAppointments = (data) => {
-    setAppointments(data);
+  useEffect(() => {
+    apiGet('/api/appointments').then((result) => setAppointments(result.data || [])).catch(() => setLoadError('Appointment tidak dapat dimuat. Pastikan backend aktif.'));
+    apiGet('/api/schedules').then((result) => setSchedules(result.data || [])).catch(() => setLoadError('Jadwal dokter tidak dapat dimuat. Pastikan backend aktif.'));
+  }, []);
 
-    localStorage.setItem(
-      'appointments',
-      JSON.stringify(data)
-    );
-  };
-
-  const updateStatus = (id, status) => {
-    const updatedAppointments = appointments.map(
-      (item) =>
-        item.id === id
-          ? {
-              ...item,
-              status,
-            }
-          : item
-    );
-
-    saveAppointments(updatedAppointments);
+  const updateStatus = async (id, status) => {
+    const result = await apiPatch(`/api/appointments/${id}/status`, { status });
+    setAppointments((current) => current.map((item) => item.id === id ? result.data : item));
   };
 
   const openEditModal = (appointment) => {
@@ -99,24 +68,30 @@ function AppointmentAdmin() {
     }));
   };
 
-  const saveReschedule = (e) => {
+  const handleScheduleChange = (e) => {
+    const schedule = schedules.find((item) => String(item.id) === e.target.value);
+    if (!schedule) return;
+    setEditingAppointment((current) => ({
+      ...current,
+      schedule_id: schedule.id,
+      doctor_id: schedule.doctor_id,
+      dokter: schedule.dokter,
+    }));
+  };
+
+  const saveReschedule = async (e) => {
     e.preventDefault();
 
     if (!editingAppointment) return;
 
-    const updatedAppointments = appointments.map(
-      (item) =>
-        item.id === editingAppointment.id
-          ? {
-              ...item,
-              dokter: editingAppointment.dokter,
-              tanggal: editingAppointment.tanggal,
-              jam: editingAppointment.jam,
-            }
-          : item
-    );
-
-    saveAppointments(updatedAppointments);
+    await apiPatch(`/api/appointments/${editingAppointment.id}/reschedule`, {
+      doctor_id: editingAppointment.doctor_id,
+      schedule_id: editingAppointment.schedule_id,
+      tanggal: editingAppointment.tanggal,
+      jam: editingAppointment.jam,
+    });
+    const result = await apiGet('/api/appointments');
+    setAppointments(result.data || []);
 
     closeEditModal();
   };
@@ -155,6 +130,7 @@ function AppointmentAdmin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
             Daftar Appointment
@@ -393,19 +369,14 @@ function AppointmentAdmin() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Dokter
+                    Jadwal Dokter
                   </label>
-
-                  <input
-                    type="text"
-                    name="dokter"
-                    value={
-                      editingAppointment.dokter
-                    }
-                    onChange={handleEditChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-teal-500"
-                  />
+                  <select name="schedule_id" value={editingAppointment.schedule_id || ''} onChange={handleScheduleChange} required className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-teal-500">
+                    <option value="">Pilih jadwal dokter</option>
+                    {schedules.filter((schedule) => schedule.status === 'Aktif').map((schedule) => (
+                      <option key={schedule.id} value={schedule.id}>{schedule.dokter} - {schedule.hari} {schedule.jamMulai}-{schedule.jamSelesai}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

@@ -23,6 +23,7 @@ export function useLoginAdmin() {
       });
 
       if (result.success) {
+        localStorage.setItem('authToken', result.data.token);
         localStorage.setItem('adminLoggedIn', 'true');
 
         localStorage.setItem(

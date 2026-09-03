@@ -9,6 +9,10 @@ require('dotenv').config();
 const config = {
   port: process.env.PORT || 3000,
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  jwtSecret: process.env.JWT_SECRET || 'klinik-development-secret-change-me',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
 };
 
 module.exports = config;

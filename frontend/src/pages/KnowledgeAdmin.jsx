@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiDelete, apiGet, apiPost, apiPut } from '../utils/api';
 
 const initialKnowledge = [
   {
@@ -41,42 +42,15 @@ const emptyForm = {
 function KnowledgeAdmin() {
   const navigate = useNavigate();
 
-  const [knowledge, setKnowledge] = useState(() => {
-    try {
-      const savedKnowledge =
-        localStorage.getItem('knowledge');
-
-      if (savedKnowledge) {
-        return JSON.parse(savedKnowledge);
-      }
-    } catch (error) {
-      console.error(
-        'Gagal membaca basis pengetahuan:',
-        error
-      );
-    }
-
-    localStorage.setItem(
-      'knowledge',
-      JSON.stringify(initialKnowledge)
-    );
-
-    return initialKnowledge;
-  });
+  const [knowledge, setKnowledge] = useState(initialKnowledge);
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [loadError, setLoadError] = useState('');
 
-  const saveKnowledge = (data) => {
-    setKnowledge(data);
-
-    localStorage.setItem(
-      'knowledge',
-      JSON.stringify(data)
-    );
-  };
+  useEffect(() => { apiGet('/api/knowledge').then((result) => setKnowledge(result.data || [])).catch(() => setLoadError('Basis pengetahuan tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
   const openAddModal = () => {
     setEditingId(null);
@@ -111,7 +85,7 @@ function KnowledgeAdmin() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (editingId !== null) {
@@ -124,7 +98,8 @@ function KnowledgeAdmin() {
           : item
       );
 
-      saveKnowledge(updatedKnowledge);
+      const result = await apiPut(`/api/knowledge/${editingId}`, form);
+      setKnowledge((current) => current.map((item) => item.id === editingId ? result.data : item));
     } else {
       const newKnowledge = {
         id: Date.now(),
@@ -136,20 +111,22 @@ function KnowledgeAdmin() {
         newKnowledge,
       ];
 
-      saveKnowledge(updatedKnowledge);
+      const result = await apiPost('/api/knowledge', form);
+      setKnowledge((current) => [...current, result.data]);
     }
 
     closeModal();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
 
     const updatedKnowledge = knowledge.filter(
       (item) => item.id !== deleteTarget.id
     );
 
-    saveKnowledge(updatedKnowledge);
+    await apiDelete(`/api/knowledge/${deleteTarget.id}`);
+    setKnowledge((current) => current.filter((item) => item.id !== deleteTarget.id));
 
     setDeleteTarget(null);
   };
@@ -181,6 +158,7 @@ function KnowledgeAdmin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import HealthBadge from '../components/HealthBadge';
+import ChatbotWidget from '../components/ChatbotWidget';
 import { useHealthCheck } from '../hooks/useHealthCheck';
 
 function Home() {
@@ -55,6 +56,8 @@ function Home() {
           Cek Backend
         </button>
       </div>
+
+        <ChatbotWidget />
     </div>
   );
 }

@@ -76,3 +76,28 @@ sama persis di endpoint manapun - gak perlu handling beda-beda tiap fetch.
 yang boleh akses API ini. Default-nya `http://localhost:5173` (port default
 Vite dev server). Kalo frontend-nya dijalanin di port/domain lain, ubah
 value ini.
+
+## API Fitur Klinik
+
+Selain `/health`, backend menyediakan:
+
+| Method | Endpoint | Akses |
+|---|---|---|
+| POST | `/api/auth/admin/login` | Publik |
+| POST | `/api/auth/pasien/login` | Publik |
+| GET | `/api/doctors` | Publik |
+| POST/PUT/DELETE | `/api/doctors` | Admin |
+| GET | `/api/schedules` | Publik |
+| POST/PUT/DELETE | `/api/schedules` | Admin |
+| GET | `/api/knowledge` | Publik |
+| POST/PUT/DELETE | `/api/knowledge` | Admin |
+| GET | `/api/appointments` | Admin |
+| PATCH | `/api/appointments/:id/status` | Admin |
+| PATCH | `/api/appointments/:id/reschedule` | Admin |
+| GET | `/api/appointments/mine` | Pasien |
+| POST | `/api/appointments` | Pasien |
+| POST | `/api/chat` | Publik |
+| GET | `/api/chat/history/:sessionId` | Publik |
+
+Endpoint yang membutuhkan autentikasi menerima header `Authorization: Bearer <JWT>`.
+Database SQLite dibuat dan di-seed otomatis saat backend pertama kali dijalankan.

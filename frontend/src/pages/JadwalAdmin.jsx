@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiDelete, apiGet, apiPost, apiPut } from '../utils/api';
 
 const initialSchedules = [
   {
@@ -43,38 +44,15 @@ const emptyForm = {
 function JadwalAdmin() {
   const navigate = useNavigate();
 
-  const [schedules, setSchedules] = useState(() => {
-    try {
-      const savedSchedules = localStorage.getItem('schedules');
-
-      if (savedSchedules) {
-        return JSON.parse(savedSchedules);
-      }
-    } catch (error) {
-      console.error('Gagal membaca data jadwal:', error);
-    }
-
-    localStorage.setItem(
-      'schedules',
-      JSON.stringify(initialSchedules)
-    );
-
-    return initialSchedules;
-  });
+  const [schedules, setSchedules] = useState(initialSchedules);
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [loadError, setLoadError] = useState('');
 
-  const saveSchedules = (data) => {
-    setSchedules(data);
-
-    localStorage.setItem(
-      'schedules',
-      JSON.stringify(data)
-    );
-  };
+  useEffect(() => { apiGet('/api/schedules').then((result) => setSchedules(result.data || [])).catch(() => setLoadError('Data jadwal tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
   const openAddModal = () => {
     setEditingId(null);
@@ -112,7 +90,7 @@ function JadwalAdmin() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (editingId !== null) {
@@ -126,7 +104,8 @@ function JadwalAdmin() {
           : schedule
       );
 
-      saveSchedules(updatedSchedules);
+      const result = await apiPut(`/api/schedules/${editingId}`, form);
+      setSchedules((current) => current.map((schedule) => schedule.id === editingId ? result.data : schedule));
     } else {
       const newSchedule = {
         id: Date.now(),
@@ -139,20 +118,22 @@ function JadwalAdmin() {
         newSchedule,
       ];
 
-      saveSchedules(updatedSchedules);
+      const result = await apiPost('/api/schedules', form);
+      setSchedules((current) => [...current, result.data]);
     }
 
     closeModal();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
 
     const updatedSchedules = schedules.filter(
       (schedule) => schedule.id !== deleteTarget.id
     );
 
-    saveSchedules(updatedSchedules);
+    await apiDelete(`/api/schedules/${deleteTarget.id}`);
+    setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
 
     setDeleteTarget(null);
   };
@@ -182,6 +163,7 @@ function JadwalAdmin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">
