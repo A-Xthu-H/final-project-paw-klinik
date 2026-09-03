@@ -19,6 +19,7 @@ function readContext() {
     }
   };
 
+  
   return {
     knowledge: read('knowledge'),
     doctors: read('doctors'),
