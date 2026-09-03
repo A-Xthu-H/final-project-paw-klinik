@@ -258,3 +258,5 @@ di-deploy ke Vercel atau Netlify sesuai kebutuhan project.
 2. Frontend: tambahkan halaman baru di `pages/`, daftarkan di
    `routes/index.jsx`, pisahkan logic data ke `hooks/`, dan buat potongan UI
    reusable di `components/`.
+
+<!-- Commit: style(ui): setup base styling and layout framework - 09/04/2026 05:34:29 -->
