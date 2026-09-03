@@ -35,6 +35,7 @@ function AppointmentAdmin() {
     useState(false);
   const [schedules, setSchedules] = useState([]);
   const [loadError, setLoadError] = useState('');
+  const [operationError, setOperationError] = useState('');
 
   useEffect(() => {
     apiGet('/api/appointments').then((result) => setAppointments(result.data || [])).catch(() => setLoadError('Appointment tidak dapat dimuat. Pastikan backend aktif.'));
@@ -42,8 +43,12 @@ function AppointmentAdmin() {
   }, []);
 
   const updateStatus = async (id, status) => {
-    const result = await apiPatch(`/api/appointments/${id}/status`, { status });
-    setAppointments((current) => current.map((item) => item.id === id ? result.data : item));
+    try {
+      const result = await apiPatch(`/api/appointments/${id}/status`, { status });
+      setAppointments((current) => current.map((item) => item.id === id ? result.data : item));
+    } catch (error) {
+      setOperationError(error.message || 'Status appointment gagal diperbarui.');
+    }
   };
 
   const openEditModal = (appointment) => {
@@ -84,14 +89,19 @@ function AppointmentAdmin() {
 
     if (!editingAppointment) return;
 
-    await apiPatch(`/api/appointments/${editingAppointment.id}/reschedule`, {
-      doctor_id: editingAppointment.doctor_id,
-      schedule_id: editingAppointment.schedule_id,
-      tanggal: editingAppointment.tanggal,
-      jam: editingAppointment.jam,
-    });
-    const result = await apiGet('/api/appointments');
-    setAppointments(result.data || []);
+    try {
+      await apiPatch(`/api/appointments/${editingAppointment.id}/reschedule`, {
+        doctor_id: editingAppointment.doctor_id,
+        schedule_id: editingAppointment.schedule_id,
+        tanggal: editingAppointment.tanggal,
+        jam: editingAppointment.jam,
+      });
+      const result = await apiGet('/api/appointments');
+      setAppointments(result.data || []);
+    } catch (error) {
+      setOperationError(error.message || 'Appointment gagal dijadwalkan ulang.');
+      return;
+    }
 
     closeEditModal();
   };
@@ -131,6 +141,7 @@ function AppointmentAdmin() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
+        {operationError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{operationError}</div>}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
             Daftar Appointment

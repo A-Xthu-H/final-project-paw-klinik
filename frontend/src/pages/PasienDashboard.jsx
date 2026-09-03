@@ -65,6 +65,7 @@ function PasienDashboard() {
       setBookingMessage('Appointment berhasil dibuat dan menunggu konfirmasi admin.');
     } catch (error) {
       setBookingMessage('Appointment gagal dibuat. Periksa jadwal atau kuota yang tersedia.');
+      setLoadError(error.message || 'Appointment gagal dibuat.');
     }
   };
 

@@ -51,6 +51,7 @@ function JadwalAdmin() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [loadError, setLoadError] = useState('');
+  const [operationError, setOperationError] = useState('');
 
   useEffect(() => { apiGet('/api/schedules').then((result) => setSchedules(result.data || [])).catch(() => setLoadError('Data jadwal tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
@@ -92,8 +93,10 @@ function JadwalAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setOperationError('');
 
-    if (editingId !== null) {
+    try {
+      if (editingId !== null) {
       const updatedSchedules = schedules.map((schedule) =>
         schedule.id === editingId
           ? {
@@ -106,7 +109,7 @@ function JadwalAdmin() {
 
       const result = await apiPut(`/api/schedules/${editingId}`, form);
       setSchedules((current) => current.map((schedule) => schedule.id === editingId ? result.data : schedule));
-    } else {
+      } else {
       const newSchedule = {
         id: Date.now(),
         ...form,
@@ -120,6 +123,10 @@ function JadwalAdmin() {
 
       const result = await apiPost('/api/schedules', form);
       setSchedules((current) => [...current, result.data]);
+      }
+    } catch (error) {
+      setOperationError(error.message || 'Data jadwal gagal disimpan.');
+      return;
     }
 
     closeModal();
@@ -132,7 +139,12 @@ function JadwalAdmin() {
       (schedule) => schedule.id !== deleteTarget.id
     );
 
-    await apiDelete(`/api/schedules/${deleteTarget.id}`);
+    try {
+      await apiDelete(`/api/schedules/${deleteTarget.id}`);
+    } catch (error) {
+      setOperationError(error.message || 'Jadwal gagal dihapus.');
+      return;
+    }
     setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
 
     setDeleteTarget(null);
@@ -164,6 +176,7 @@ function JadwalAdmin() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
+        {operationError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{operationError}</div>}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">

@@ -13,6 +13,10 @@ function scheduleConflicts(doctorId, hari, jamMulai, jamSelesai, ignoredId = nul
   const values = ignoredId ? [doctorId, hari, jamSelesai, jamMulai, ignoredId] : [doctorId, hari, jamSelesai, jamMulai];
   return database.prepare(query).get(...values).count > 0;
 }
+function matchesScheduleDay(date, day) {
+  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  return days[new Date(`${date}T00:00:00`).getDay()] === day;
+}
 
 function doctors(req, res) { return ok(res, database.prepare(`${doctorSelect} ORDER BY id DESC`).all()); }
 function createDoctor(req, res) {
@@ -60,17 +64,21 @@ function myAppointments(req, res) { return ok(res, database.prepare(`${appointme
 function createAppointment(req, res) {
   const { namaPasien, kontak, doctor_id, schedule_id, tanggal, jam, sumber = 'form' } = req.body || {};
   const schedule = database.prepare('SELECT * FROM schedules WHERE id = ? AND doctor_id = ? AND status = \'Aktif\'').get(schedule_id, doctor_id);
-  if (!schedule || !required(req.body || {}, ['namaPasien', 'kontak', 'tanggal', 'jam']) || jam < schedule.jam_mulai || jam >= schedule.jam_selesai) return fail(res, 'Jadwal appointment tidak valid');
-  const booked = database.prepare("SELECT COUNT(*) AS count FROM appointments WHERE schedule_id = ? AND tanggal = ? AND status != 'Dibatalkan'").get(schedule_id, tanggal).count;
-  if (booked >= schedule.kuota) return fail(res, 'Kuota jadwal sudah penuh', 409);
-  const result = database.prepare('INSERT INTO appointments (pasien_id, nama_pasien, kontak_pasien, doctor_id, schedule_id, tanggal, jam, sumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(req.user.id, namaPasien, kontak, doctor_id, schedule_id, tanggal, jam, sumber);
+  if (!schedule || !required(req.body || {}, ['namaPasien', 'kontak', 'tanggal', 'jam']) || !matchesScheduleDay(tanggal, schedule.hari) || jam < schedule.jam_mulai || jam >= schedule.jam_selesai) return fail(res, 'Tanggal atau jam tidak sesuai jadwal dokter');
+  const create = database.transaction(() => {
+    const booked = database.prepare("SELECT COUNT(*) AS count FROM appointments WHERE schedule_id = ? AND tanggal = ? AND status != 'Dibatalkan'").get(schedule_id, tanggal).count;
+    if (booked >= schedule.kuota) return null;
+    return database.prepare('INSERT INTO appointments (pasien_id, nama_pasien, kontak_pasien, doctor_id, schedule_id, tanggal, jam, sumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(req.user.id, namaPasien, kontak, doctor_id, schedule_id, tanggal, jam, sumber);
+  });
+  const result = create();
+  if (!result) return fail(res, 'Kuota jadwal sudah penuh', 409);
   return ok(res, database.prepare(`${appointmentSelect} WHERE a.id = ?`).get(result.lastInsertRowid), 'Appointment berhasil dibuat');
 }
 function updateAppointmentStatus(req, res) { const allowed = ['Menunggu', 'Dikonfirmasi', 'Dibatalkan', 'Selesai']; if (!allowed.includes(req.body?.status)) return fail(res, 'Status appointment tidak valid'); const result = database.prepare('UPDATE appointments SET status = ? WHERE id = ?').run(req.body.status, req.params.id); return result.changes ? ok(res, database.prepare(`${appointmentSelect} WHERE a.id = ?`).get(req.params.id), 'Status appointment diperbarui') : fail(res, 'Appointment tidak ditemukan', 404); }
 function rescheduleAppointment(req, res) {
   const { doctor_id, schedule_id, tanggal, jam } = req.body || {};
   const schedule = database.prepare("SELECT * FROM schedules WHERE id = ? AND doctor_id = ? AND status = 'Aktif'").get(schedule_id, doctor_id);
-  if (!schedule || !tanggal || !jam || jam < schedule.jam_mulai || jam >= schedule.jam_selesai) return fail(res, 'Jadwal baru tidak valid');
+  if (!schedule || !tanggal || !jam || !matchesScheduleDay(tanggal, schedule.hari) || jam < schedule.jam_mulai || jam >= schedule.jam_selesai) return fail(res, 'Tanggal atau jam baru tidak sesuai jadwal');
   const booked = database.prepare("SELECT COUNT(*) AS count FROM appointments WHERE schedule_id = ? AND tanggal = ? AND status != 'Dibatalkan' AND id != ?").get(schedule_id, tanggal, req.params.id).count;
   if (booked >= schedule.kuota) return fail(res, 'Kuota jadwal baru sudah penuh', 409);
   const result = database.prepare('UPDATE appointments SET doctor_id = ?, schedule_id = ?, tanggal = ?, jam = ? WHERE id = ?').run(doctor_id, schedule_id, tanggal, jam, req.params.id);

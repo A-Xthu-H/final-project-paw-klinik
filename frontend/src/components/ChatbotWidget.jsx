@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useChatbot } from '../hooks/useChatbot';
+import { apiGet } from '../utils/api';
 
 const quickQuestions = [
   'Jadwal dokter hari ini',
   'Jam operasional klinik',
   'Layanan yang tersedia',
   'Cara pendaftaran pasien baru',
+  'Saya ingin membuat appointment',
 ];
 
 function readContext() {
@@ -27,7 +29,14 @@ function readContext() {
 function ChatbotWidget({ embedded = false }) {
   const [open, setOpen] = useState(embedded);
   const [draft, setDraft] = useState('');
+  const [showBooking, setShowBooking] = useState(false);
+  const [booking, setBooking] = useState({ schedule_id: '', tanggal: '', jam: '', kontak: '' });
+  const [availableSchedules, setAvailableSchedules] = useState([]);
   const { messages, loading, error, sendMessage } = useChatbot();
+
+  useEffect(() => {
+    apiGet('/api/schedules').then((result) => setAvailableSchedules(result.data || [])).catch(() => {});
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -37,7 +46,24 @@ function ChatbotWidget({ embedded = false }) {
   };
 
   const handleQuickQuestion = (question) => {
+    if (question.includes('appointment')) {
+      setShowBooking(true);
+      return;
+    }
     sendMessage(question, readContext());
+  };
+
+  const handleBooking = async (event) => {
+    event.preventDefault();
+    const context = readContext();
+    const schedule = availableSchedules.find((item) => String(item.id) === String(booking.schedule_id));
+    if (!schedule) return;
+    await sendMessage('Saya ingin membuat appointment melalui chatbot.', context, {
+      ...booking,
+      doctor_id: schedule.doctor_id,
+    });
+    setShowBooking(false);
+    setBooking({ schedule_id: '', tanggal: '', jam: '', kontak: '' });
   };
 
   const panel = (
@@ -72,6 +98,19 @@ function ChatbotWidget({ embedded = false }) {
               ))}
             </div>
           </div>
+        )}
+        {showBooking && (
+          <form onSubmit={handleBooking} className="space-y-2 rounded-xl border border-teal-200 bg-white p-3 text-sm shadow-sm">
+            <p className="font-semibold text-gray-700">Buat appointment</p>
+            <select value={booking.schedule_id} onChange={(event) => setBooking((current) => ({ ...current, schedule_id: event.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2">
+              <option value="">Pilih jadwal dokter</option>
+              {availableSchedules.filter((schedule) => schedule.status === 'Aktif').map((schedule) => <option key={schedule.id} value={schedule.id}>{schedule.dokter} - {schedule.hari} {schedule.jamMulai}-{schedule.jamSelesai}</option>)}
+            </select>
+            <input type="date" value={booking.tanggal} onChange={(event) => setBooking((current) => ({ ...current, tanggal: event.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+            <input type="time" value={booking.jam} onChange={(event) => setBooking((current) => ({ ...current, jam: event.target.value }))} required className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+            <input type="tel" value={booking.kontak} onChange={(event) => setBooking((current) => ({ ...current, kontak: event.target.value }))} placeholder="Kontak pasien" required className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+            <button type="submit" disabled={loading} className="w-full rounded-lg bg-teal-700 px-3 py-2 font-semibold text-white disabled:bg-gray-300">Kirim booking</button>
+          </form>
         )}
         {messages.map((message, index) => (
           <div key={`${message.role}-${index}`} className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${message.role === 'user' ? 'self-end bg-teal-700 text-white' : 'self-start bg-white text-gray-700 shadow-sm'}`}>

@@ -66,6 +66,7 @@ function DokterAdmin() {
   const [editingId, setEditingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const [operationError, setOperationError] = useState('');
 
   useEffect(() => { apiGet('/api/doctors').then((result) => setDoctors(result.data || [])).catch(() => setLoadError('Data dokter tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
@@ -107,8 +108,10 @@ function DokterAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setOperationError('');
 
-    if (editingId !== null) {
+    try {
+      if (editingId !== null) {
       const updatedDoctors = doctors.map((doctor) =>
         doctor.id === editingId
           ? {
@@ -120,7 +123,7 @@ function DokterAdmin() {
 
       const result = await apiPut(`/api/doctors/${editingId}`, form);
       setDoctors((current) => current.map((doctor) => doctor.id === editingId ? result.data : doctor));
-    } else {
+      } else {
       const newDoctor = {
         id: Date.now(),
         ...form,
@@ -133,6 +136,10 @@ function DokterAdmin() {
 
       const result = await apiPost('/api/doctors', form);
       setDoctors((current) => [...current, result.data]);
+      }
+    } catch (error) {
+      setOperationError(error.message || 'Data dokter gagal disimpan.');
+      return;
     }
 
     closeModal();
@@ -149,7 +156,12 @@ function DokterAdmin() {
       (doctor) => doctor.id !== deleteTarget.id
     );
 
-    await apiDelete(`/api/doctors/${deleteTarget.id}`);
+    try {
+      await apiDelete(`/api/doctors/${deleteTarget.id}`);
+    } catch (error) {
+      setOperationError(error.message || 'Dokter gagal dihapus.');
+      return;
+    }
     setDoctors((current) => current.filter((doctor) => doctor.id !== deleteTarget.id));
 
     setDeleteTarget(null);
@@ -183,6 +195,7 @@ function DokterAdmin() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
+        {operationError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{operationError}</div>}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">

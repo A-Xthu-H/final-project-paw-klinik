@@ -1,13 +1,25 @@
-import { useState } from 'react';
-import { apiPost } from '../utils/api';
+import { useEffect, useState } from 'react';
+import { apiGet, apiPost } from '../utils/api';
 
 export function useChatbot() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [sessionId] = useState(() => `web-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const [sessionId] = useState(() => {
+    const saved = localStorage.getItem('chatSessionId');
+    if (saved) return saved;
+    const created = `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem('chatSessionId', created);
+    return created;
+  });
 
-  const sendMessage = async (message, context = {}) => {
+  useEffect(() => {
+    apiGet(`/api/chat/history/${sessionId}`)
+      .then((result) => setMessages((result.data || []).map((item) => ({ role: item.role === 'ai' ? 'assistant' : 'user', content: item.pesan }))))
+      .catch(() => {});
+  }, [sessionId]);
+
+  const sendMessage = async (message, context = {}, appointment) => {
     const trimmedMessage = message.trim();
 
     if (!trimmedMessage || loading) return;
@@ -24,6 +36,7 @@ export function useChatbot() {
         message: trimmedMessage,
         context,
         sessionId,
+        appointment,
       });
 
       setMessages((current) => [

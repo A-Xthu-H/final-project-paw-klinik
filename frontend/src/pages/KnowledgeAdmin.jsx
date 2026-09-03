@@ -49,6 +49,7 @@ function KnowledgeAdmin() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [loadError, setLoadError] = useState('');
+  const [operationError, setOperationError] = useState('');
 
   useEffect(() => { apiGet('/api/knowledge').then((result) => setKnowledge(result.data || [])).catch(() => setLoadError('Basis pengetahuan tidak dapat dimuat. Pastikan backend aktif.')); }, []);
 
@@ -87,8 +88,10 @@ function KnowledgeAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setOperationError('');
 
-    if (editingId !== null) {
+    try {
+      if (editingId !== null) {
       const updatedKnowledge = knowledge.map((item) =>
         item.id === editingId
           ? {
@@ -100,7 +103,7 @@ function KnowledgeAdmin() {
 
       const result = await apiPut(`/api/knowledge/${editingId}`, form);
       setKnowledge((current) => current.map((item) => item.id === editingId ? result.data : item));
-    } else {
+      } else {
       const newKnowledge = {
         id: Date.now(),
         ...form,
@@ -113,6 +116,10 @@ function KnowledgeAdmin() {
 
       const result = await apiPost('/api/knowledge', form);
       setKnowledge((current) => [...current, result.data]);
+      }
+    } catch (error) {
+      setOperationError(error.message || 'Informasi gagal disimpan.');
+      return;
     }
 
     closeModal();
@@ -125,7 +132,12 @@ function KnowledgeAdmin() {
       (item) => item.id !== deleteTarget.id
     );
 
-    await apiDelete(`/api/knowledge/${deleteTarget.id}`);
+    try {
+      await apiDelete(`/api/knowledge/${deleteTarget.id}`);
+    } catch (error) {
+      setOperationError(error.message || 'Informasi gagal dihapus.');
+      return;
+    }
     setKnowledge((current) => current.filter((item) => item.id !== deleteTarget.id));
 
     setDeleteTarget(null);
@@ -158,6 +170,7 @@ function KnowledgeAdmin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {operationError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{operationError}</div>}
         {loadError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>

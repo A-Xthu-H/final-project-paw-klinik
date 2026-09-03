@@ -17,6 +17,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api', clinicRoutes);
 
-app.listen(config.port, () => {
-  console.log(`Backend jalan di http://localhost:${config.port}`);
-});
+if (require.main === module) {
+  app.listen(config.port, () => {
+    console.log(`Backend jalan di http://localhost:${config.port}`);
+  });
+}
+
+module.exports = app;
